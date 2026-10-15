@@ -59,7 +59,7 @@ before it counts.
 ## Caveats
 
 - **Audio was measured, not heard.** Tempo measures 120.0 BPM, onsets land on the beat grid, and the cue
-  median offset is 0 ms. Loudness is about −14 LUFS integrated with −0.3 dBFS peak. Please listen once
+  median offset is 0 ms. Loudness is −13.9 LUFS integrated with −0.3 dBFS peak. Please listen once
   before showing it.
 - Survey figures should be checked against the original reports before external use.
 
