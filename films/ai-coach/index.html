@@ -1,0 +1,67 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>AI Coach — launch film</title>
+<style>
+@font-face { font-family: Geist; src: url(fonts/Geist-Variable.woff2) format('woff2'); font-weight: 100 900; }
+:root {
+  --mint: #2EE6A0; --red: #FF4D57; --ink: #F4F7F5; --mute: #8C9792; --dim: #5D6864;
+  --card: #0A0F0D; --card2: #111815; --line: #1F2925;
+}
+html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; }
+#stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: #030504;
+  font-family: Geist, Inter, sans-serif; color: var(--ink); -webkit-font-smoothing: antialiased; }
+#bg, #hud, #fade { position: absolute; inset: 0; }
+#world { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; }
+#grid { position: absolute; left: -3000px; top: -3000px; width: 7920px; height: 7080px;
+  background-image: radial-gradient(circle, rgba(255,255,255,.075) 1.3px, transparent 1.8px);
+  background-size: 44px 44px; background-position: 22px 22px; }
+#fade { background: #000; opacity: 0; pointer-events: none; }
+.abs, .g { position: absolute; }
+.g { box-sizing: border-box; }
+#shape { position: absolute; box-sizing: border-box; border-style: solid; border-width: 2px; }
+.k { position: absolute; font-size: 20px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--mint); white-space: nowrap; }
+.t { font-weight: 700; letter-spacing: -.025em; color: var(--ink); }
+.m { color: var(--mute); }
+.num { font-variant-numeric: tabular-nums; font-weight: 700; letter-spacing: -.03em; }
+.chip { position: absolute; display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 20px;
+  border-radius: 23px; border: 1.5px solid rgba(46,230,160,.6); color: var(--mint); font-size: 20px;
+  font-weight: 600; white-space: nowrap; box-sizing: border-box; background: rgba(46,230,160,.06); }
+.chip.fill { background: var(--mint); color: #03130C; border-color: var(--mint); }
+.chip .d { width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
+.bub { position: absolute; padding: 20px 26px; border-radius: 26px; font-size: 29px; line-height: 1.32;
+  font-weight: 500; max-width: 640px; box-sizing: border-box; }
+.bub.them { background: #19211E; color: var(--ink); border-top-left-radius: 8px; }
+.bub.me { background: var(--mint); color: #03130C; border-top-right-radius: 8px; }
+.bub span, .hl span { display: inline-block; white-space: pre; }
+.av { position: absolute; width: 60px; height: 60px; border-radius: 50%; background: #1B2420; border: 1.5px solid #2A3631;
+  display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 21px; color: var(--ink); box-sizing: border-box; }
+.doc { position: absolute; width: 300px; height: 74px; border-radius: 18px; background: var(--card2); border: 1.5px solid #24302B;
+  display: flex; align-items: center; gap: 16px; padding: 0 20px; box-sizing: border-box; font-size: 23px; font-weight: 600; }
+.pill { position: absolute; width: 196px; height: 260px; border-radius: 26px; background: #0F1513; border: 1.5px solid #23302B; box-sizing: border-box; }
+.pill .n { position: absolute; left: 22px; top: 20px; color: var(--mint); font-weight: 700; font-size: 22px; }
+.pill .ti { position: absolute; left: 0; right: 0; top: 76px; text-align: center; font-weight: 700; font-size: 28px; letter-spacing: .01em; }
+.pill .de { position: absolute; left: 14px; right: 14px; top: 124px; text-align: center; font-size: 20px; line-height: 1.32; color: var(--mute); }
+.agent { position: absolute; height: 74px; padding: 0 26px 0 18px; border-radius: 37px; background: #0F1513; border: 1.5px solid rgba(46,230,160,.55);
+  display: flex; align-items: center; gap: 14px; font-size: 25px; font-weight: 600; white-space: nowrap; box-sizing: border-box; }
+.agent i { width: 40px; height: 40px; border-radius: 50%; background: rgba(46,230,160,.14); border: 1.5px solid var(--mint); box-sizing: border-box;
+  display: flex; align-items: center; justify-content: center; font-style: normal; color: var(--mint); font-size: 18px; font-weight: 700; }
+.cur { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.cur .tag { position: absolute; left: 22px; top: 26px; height: 30px; padding: 0 12px; border-radius: 15px; font: 600 16px Geist; line-height: 30px; white-space: nowrap; }
+.rip { position: absolute; left: 0; top: 0; width: 60px; height: 60px; margin: -30px 0 0 -30px; border-radius: 50%; border: 2px solid; box-sizing: border-box; }
+#src { position: absolute; left: 72px; bottom: 50px; font-size: 17px; color: var(--dim); white-space: nowrap; }
+#cap { position: absolute; left: 0; right: 0; bottom: 64px; text-align: center; font-size: 25px; font-weight: 600; white-space: nowrap; }
+#cap b { color: var(--mint); font-weight: 700; letter-spacing: .12em; font-size: 20px; margin-right: 14px; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bg"></div>
+  <div id="world"><div id="grid"></div><div id="shape"></div></div>
+  <div id="hud"></div>
+  <div id="fade"></div>
+</div>
+<script src="film.js"></script>
+</body>
+</html>
