@@ -3,3 +3,6 @@ renders/
 snapshots/
 .DS_Store
 *.log
+films/ai-coach/node_modules
+films/ai-coach/*.wav
+!films/ai-coach/mix.wav

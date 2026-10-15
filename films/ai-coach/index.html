@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>AI Coach — launch film</title>
+<style>
+  html, body { margin: 0; background: #000; }
+  #stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: #000;
+           font-family: 'Inter', sans-serif; color: #F4F7F5; }
+  #world { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; }
+  #grid  { position: absolute; left: -2040px; top: -1460px; width: 6000px; height: 4000px;
+           background-image: radial-gradient(circle, rgba(255,255,255,0.075) 1.6px, transparent 2px);
+           background-size: 48px 48px; background-position: 0 0; }
+  #hud   { position: absolute; inset: 0; pointer-events: none; }
+  .a     { position: absolute; left: 0; top: 0; white-space: nowrap; transform-origin: 50% 50%; }
+  .disp  { font-family: 'Inter Display', 'Inter', sans-serif; font-weight: 700; letter-spacing: -0.02em; }
+  .over  { font-size: 22px; font-weight: 600; letter-spacing: 0.16em; color: #8C9792; }
+  .cap   { font-size: 46px; }
+  .foot  { font-size: 17px; color: #6C7672; letter-spacing: 0.01em; }
+  #shape { position: absolute; left: 0; top: 0; }
+  .num   { font-family: 'Inter Display', 'Inter', sans-serif; font-weight: 700; font-size: 168px;
+           font-feature-settings: 'tnum' 1; letter-spacing: -0.03em; display: flex; align-items: center; }
+  .slot  { display: inline-block; height: 1.1em; overflow: hidden; position: relative; width: 0.62em;
+           clip-path: inset(0 -80px); }
+  .strip { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; }
+  .strip span { height: 1.1em; line-height: 1.1em; text-align: center; width: 0.62em; }
+  .tab   { font-size: 60px; }
+  .chip  { font-size: 25px; font-weight: 500; padding: 0 26px; height: 58px; line-height: 58px; border-radius: 16px;
+           background: #0C1110; box-shadow: inset 0 0 0 1.5px #24302C; display: flex; align-items: center; gap: 16px; }
+  .doc   { width: 18px; height: 24px; border-radius: 3px; box-shadow: inset 0 0 0 2px #2EE6A6; position: relative; flex: none; }
+  .doc::after { content: ''; position: absolute; left: 4px; right: 4px; top: 7px; height: 2px; background: #2EE6A6;
+                box-shadow: 0 5px 0 #2EE6A6, 0 10px 0 #2EE6A6; }
+  .node  { width: 300px; height: 104px; border-radius: 52px; background: #0C1110; display: flex; flex-direction: column;
+           align-items: center; justify-content: center; }
+  .node b { font-size: 31px; font-weight: 700; }
+  .node i { font-style: normal; font-size: 19px; color: #8C9792; margin-top: 4px; }
+  .bub   { font-size: 30px; line-height: 1.35; padding: 20px 28px; border-radius: 26px; white-space: normal; }
+  .pill  { font-size: 19px; font-weight: 600; padding: 7px 16px; border-radius: 999px; }
+  .cur   { position: absolute; left: 0; top: 0; }
+  .cur .tag { position: absolute; left: 22px; top: 30px; font-size: 19px; font-weight: 600; padding: 5px 12px;
+              border-radius: 999px; white-space: nowrap; }
+  .ripple { position: absolute; left: 0; top: 0; width: 60px; height: 60px; border-radius: 50%; margin: -30px 0 0 -30px; }
+  .w     { display: inline-block; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="world"><div id="grid"></div></div>
+  <div id="hud"></div>
+</div>
+<script src="film.js"></script>
+</body>
+</html>
