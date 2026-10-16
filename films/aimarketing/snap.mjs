@@ -6,10 +6,10 @@ import fs from 'fs';
 const [out, sc, ...ts] = process.argv.slice(2);
 fs.mkdirSync(out, { recursive: true });
 const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: parseFloat(sc) });
+const page = await browser.newPage({ viewport: (process.env.VERT ? { width: 1080, height: 1920 } : { width: 1920, height: 1080 }), deviceScaleFactor: parseFloat(sc) });
 page.on('console', m => { if (m.type() === 'error' || m.type() === 'warning') console.log('console:', m.text()); });
 page.on('pageerror', e => console.log('pageerror:', e.message));
-await page.goto('http://127.0.0.1:8765/index.html');
+await page.goto('http://127.0.0.1:8765/index.html' + (process.env.VERT ? '?v=1' : ''));
 await page.waitForFunction(() => window.READY === true, null, { timeout: 30000 });
 for (const t of ts) {
   await page.evaluate(t => window.M.seek(t), parseFloat(t));

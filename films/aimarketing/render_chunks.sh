@@ -2,7 +2,8 @@
 # Render 3600 frames in 4 s chunks across 4 workers, motion-blur each chunk, concat, mux audio.
 set -e
 cd "$(dirname "$0")"
-WORK=${WORK:-build/chunks}; mkdir -p $WORK
+if [ -n "$VERT" ]; then TAG=vertical-1080x1920; else TAG=1080p60; fi
+WORK=${WORK:-build/chunks-$TAG}; mkdir -p $WORK
 FR=240; NCH=15
 chunk() {
   c=$1; d=$WORK/c$c; f0=$((c*FR)); f1=$((f0+FR))
@@ -13,10 +14,10 @@ chunk() {
     -r 60 -c:v libx264 -preset slow -crf 15 -tune film -colorspace bt709 -color_primaries bt709 -color_trc bt709 $WORK/seg$c.mp4
   rm -rf $d; echo "chunk $c done"
 }
-export -f chunk; export WORK FR
+export -f chunk; export WORK FR VERT
 seq 0 $((NCH-1)) | xargs -P 4 -I{} bash -c 'chunk {}'
 : > $WORK/list.txt; for c in $(seq 0 $((NCH-1))); do echo "file 'seg$c.mp4'" >> $WORK/list.txt; done
-ffmpeg -loglevel error -y -f concat -safe 0 -i $WORK/list.txt -c copy build/video.mp4
-ffmpeg -loglevel error -y -i build/video.mp4 -i build/mix.wav -af "alimiter=limit=0.89:level=false,loudnorm=I=-14:TP=-1:LRA=11" -ar 48000 \
-  -c:v copy -c:a aac -b:a 256k -shortest -movflags +faststart build/aimarketing-launch-1080p60.mp4
+ffmpeg -loglevel error -y -f concat -safe 0 -i $WORK/list.txt -c copy build/video-$TAG.mp4
+ffmpeg -loglevel error -y -i build/video-$TAG.mp4 -i build/mix.wav -af "alimiter=limit=0.89:level=false,loudnorm=I=-14:TP=-1:LRA=11" -ar 48000 \
+  -c:v copy -c:a aac -b:a 256k -shortest -movflags +faststart build/aimarketing-launch-$TAG.mp4
 echo ALL DONE

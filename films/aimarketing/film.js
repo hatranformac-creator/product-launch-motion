@@ -10,6 +10,12 @@ const outQ = u => 1 - Math.pow(1 - clamp(u), 4);
 const inC = u => Math.pow(clamp(u), 3);
 const smooth = u => { u = clamp(u); return u * u * (3 - 2 * u); };
 const $ = id => document.getElementById(id);
+// ?v=1 renders the 9:16 vertical cut (1080x1920) from the same timeline
+const V = new URLSearchParams(location.search).has('v');
+const SW = V ? 1080 : 1920, SH = V ? 1920 : 1080, SCX = SW / 2, SCY = V ? 900 : 540;
+const vz = (a, v) => V ? v : a;
+document.querySelectorAll('#stage, .layer').forEach(e => { e.style.width = SW + 'px'; e.style.height = SH + 'px'; });
+$('trail').width = SW; $('trail').height = SH;
 
 function stepR(tau, { w, z }) {
   if (tau <= 0) return 0;
@@ -71,13 +77,13 @@ const world = $('world'), hud = $('hud'), bgL = $('bg'), trail = $('trail').getC
 const CX = new Track(0), CY = new Track(0), LZ = new Track(Math.log(0.9));
 const cam = (t, x, y, z, sp = SP.cam) => { CX.to(t, x, sp); CY.to(t, y, sp); LZ.to(t, Math.log(z), sp); };
 const camAt = t => ({ x: CX.at(t), y: CY.at(t), z: Math.exp(LZ.at(t)) });
-const toScreen = (t, x, y) => { const c = camAt(t); return [960 + (x - c.x) * c.z, 540 + (y - c.y) * c.z]; };
+const toScreen = (t, x, y) => { const c = camAt(t); return [SCX + (x - c.x) * c.z, SCY + (y - c.y) * c.z]; };
 
 // ---------- background ----------
 bgL.innerHTML = `
   <div id="pool1" class="abs" style="width:1400px;height:1400px;border-radius:50%;background:radial-gradient(closest-side,rgba(34,142,205,.16),rgba(34,142,205,0))"></div>
   <div id="pool2" class="abs" style="width:1300px;height:1300px;border-radius:50%;background:radial-gradient(closest-side,rgba(36,178,75,.11),rgba(36,178,75,0))"></div>
-  <svg id="sky" class="abs" width="1920" height="1080" style="opacity:.6"></svg>
+  <svg id="sky" class="abs" width="${SW}" height="${SH}" style="opacity:.6"></svg>
   <svg id="wave" class="abs" width="1100" height="520" viewBox="0 0 1100 520">
     <defs>
       <linearGradient id="wg1" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#5AA9E6"/><stop offset="1" stop-color="#0B4DA2"/></linearGradient>
@@ -89,21 +95,21 @@ bgL.innerHTML = `
   </svg>`;
 { // faint skyline, the deck's backdrop motif
   let s = '', x = 0, k = 7;
-  while (x < 1920) { k = (k * 9301 + 49297) % 233280; const w = 50 + (k % 70), h = 90 + ((k >> 3) % 260);
-    s += `<rect x="${x}" y="${1080 - h}" width="${w}" height="${h}" fill="#E4ECF7"/>`;
-    if (k % 3 === 0) s += `<rect x="${x + w / 2 - 4}" y="${1080 - h - 40}" width="8" height="40" fill="#E4ECF7"/>`;
+  while (x < SW) { k = (k * 9301 + 49297) % 233280; const w = 50 + (k % 70), h = 90 + ((k >> 3) % 260);
+    s += `<rect x="${x}" y="${SH - h}" width="${w}" height="${h}" fill="#E4ECF7"/>`;
+    if (k % 3 === 0) s += `<rect x="${x + w / 2 - 4}" y="${SH - h - 40}" width="8" height="40" fill="#E4ECF7"/>`;
     x += w + 6; }
   $('sky').innerHTML = s;
 }
 function drawBg(t) {
-  $('pool1').style.transform = `translate(${1050 + 60 * Math.sin(t * 0.21)}px,${-560 + 40 * Math.cos(t * 0.17)}px)`;
-  $('pool2').style.transform = `translate(${-520 + 50 * Math.cos(t * 0.19)}px,${300 + 40 * Math.sin(t * 0.23)}px)`;
+  $('pool1').style.transform = `translate(${vz(1050, 250) + 60 * Math.sin(t * 0.21)}px,${vz(-560, -420) + 40 * Math.cos(t * 0.17)}px)`;
+  $('pool2').style.transform = `translate(${vz(-520, -560) + 50 * Math.cos(t * 0.19)}px,${vz(300, 1150) + 40 * Math.sin(t * 0.23)}px)`;
   let o, off;
   if (t < 30) { const e = stepR(t, SP.soft), x = smooth((t - b(14.5)) / 0.9); o = 1 - x; off = (1 - e) * 260 + x * 320; }
   else { const e = stepR(t - b(109), SP.soft); o = clamp(e * 1.3); off = (1 - e) * 260; }
   const el = $('wave');
   el.style.opacity = o;
-  el.style.transform = `translate(${880 + off + 8 * Math.sin(t * 0.8)}px,${600 + off * 0.5}px)`;
+  el.style.transform = `translate(${SW - 1040 + off + 8 * Math.sin(t * 0.8)}px,${SH - 480 + off * 0.5}px)`;
 }
 
 // ---------- hero shape: one element, never cut ----------
@@ -191,7 +197,7 @@ function drawCursor(c, t) {
 you.el.querySelector('.lab').dataset.base = 'You';
 ai.el.querySelector('.lab').dataset.base = 'AIMarketing AI';
 function drawTrail(t) {
-  trail.clearRect(0, 0, 1920, 1080);
+  trail.clearRect(0, 0, SW, SH);
   const c = ai, o = clamp(c.O.at(t));
   if (o < 0.05) return;
   const pts = [];
@@ -239,11 +245,11 @@ class Odo {
 // =====================================================================
 // SCENE 1 · Problem (b0–b16)
 // =====================================================================
-const h1 = mk(`<div class="abs disp" style="width:1920px;top:470px;text-align:center;font-weight:800;font-size:104px;letter-spacing:-3px;line-height:1.1">
+const h1 = mk(`<div class="abs disp" style="width:${SW}px;top:${vz(470, 735)}px;text-align:center;font-weight:800;font-size:${vz(104, 124)}px;letter-spacing:-3px;line-height:1.1">
   <span id="h1a" style="display:inline-block">One campaign.</span> <span id="h1b" style="display:inline-block;color:var(--navy)">Nine tools.</span></div>`, hud);
 const PAINS = ['Content scattered across tabs.', 'Approvals lost in chat threads.', 'Results tallied by hand.'];
-const painEls = PAINS.map(p => mk(`<div class="abs disp" style="width:1920px;top:492px;text-align:center;font-weight:700;font-size:74px;letter-spacing:-2px;line-height:1.1">
-  <span style="display:inline-flex;align-items:center;gap:26px"><span style="display:inline-flex;width:62px;height:62px;border-radius:50%;background:#FDEBD8;color:#E07B1F;align-items:center;justify-content:center;font:800 40px Inter">×</span>${p}</span></div>`, hud));
+const painEls = PAINS.map(p => mk(`<div class="abs disp" style="width:${SW}px;top:${vz(492, 730)}px;box-sizing:border-box;padding:0 ${vz(0, 70)}px;text-align:center;font-weight:700;font-size:${vz(74, 80)}px;letter-spacing:-2px;line-height:1.1">
+  <span style="display:inline-flex;align-items:center;gap:${vz(26, 22)}px;flex-direction:${V ? 'column' : 'row'}"><span style="display:inline-flex;width:62px;height:62px;border-radius:50%;background:#FDEBD8;color:#E07B1F;align-items:center;justify-content:center;font:800 40px Inter">×</span>${p}</span></div>`, hud));
 const TOOLS = [
   ['Docs', '#4285F4', 'D', -650, -300, -5], ['Sheets', '#0F9D58', 'S', 540, -330, 4], ['ChatGPT', '#10A37F', 'G', -110, -385, 2],
   ['WordPress', '#21759B', 'W', 790, -190, -3], ['Facebook', '#1877F2', 'f', -800, 30, 3], ['LinkedIn', '#0A66C2', 'in', 320, 340, -4],
@@ -260,8 +266,9 @@ const TOOL_T = TOOLS.map((_, i) => b(1 + i));
 TOOL_T.forEach((t, i) => cue(t, 'pop', { n: i }));
 [b(9), b(11), b(13)].forEach(t => cue(t, 'whoosh', { g: 0.5 }));
 cue(b(14), 'riser', { d: 2.0 });
+const TOOLS_V = [[-300, -650, -5], [260, -560, 4], [-40, -470, 2], [330, -330, -3], [-330, -310, 3], [280, 330, -4], [-300, 430, 5], [250, 560, 3], [-60, 650, -2]];
 function toolPos(t, i) {
-  const [, , , x, y, r] = TOOLS[i];
+  const [x, y, r] = V ? TOOLS_V[i] : TOOLS[i].slice(3);
   const fx = x + 7 * Math.sin(t * 1.1 + i * 1.7), fy = y + 7 * Math.cos(t * 1.3 + i * 2.3);
   const e = inC((t - (b(14) + i * 0.07)) / 0.95);
   return { x: lerp(fx, 0, e), y: lerp(fy, 0, e), r: r + e * 120, s: lerp(1, 0.12, e), o: 1 - smooth((e - 0.82) / 0.18), e };
@@ -313,7 +320,7 @@ const ringG = group(RING.w, RING.h);
 const ringImg = kid(ringG, 0, 0, `<img src="brand/ring_crop.png" style="width:${RING.w}px;height:${RING.h}px">`);
 const wordEl = mk(`<img class="abs" src="brand/word.png" style="width:${LOGO.w}px">`, world);
 const PILLARS = [['Create', '#19479D'], ['Control', '#24B24B'], ['Publish', '#228ECD'], ['Measure', '#F4A04C']];
-const pillarRow = mk(`<div class="abs row" style="gap:46px;font:600 40px Inter;color:var(--ink)">${PILLARS.map(([p, c]) => `<span class="pl row" style="gap:14px"><span style="width:16px;height:16px;border-radius:50%;background:${c}"></span>${p}</span>`).join('')}</div>`, world);
+const pillarRow = mk(`<div class="abs row" style="gap:${vz(46, 30)}px;font:600 ${vz(40, 34)}px Inter;color:var(--ink)">${PILLARS.map(([p, c]) => `<span class="pl row" style="gap:14px"><span style="width:16px;height:16px;border-radius:50%;background:${c}"></span>${p}</span>`).join('')}</div>`, world);
 const pillarEls = [...pillarRow.querySelectorAll('.pl')];
 function lockup(t0, cx, cy) { // returns timings, sets tracks: dot hits at t0 and becomes the ring
   heroTo(t0, cx, cy, RING.w, RING.h, 999, '#24B24B', SP.pop);
@@ -375,11 +382,11 @@ const w3 = (x, y) => [O3.x + x, O3.y + y];
 // shape: ring → brief card
 heroTo(b(24) - 0.08, 0, 0, C3.w, C3.h, 32, '#FFFFFF', SP.card);
 HA.to(b(24) - 0.1, 1, { w: 22, z: 1 }); HS.to(b(24), 1, SP.soft);
-cam(b(24) - 0.1, 0, 0, 1.3, { w: 6, z: 1 });
+cam(b(24) - 0.1, 0, 0, vz(1.3, 1.02), { w: 6, z: 1 });
 cue(b(24) - 0.08, 'swoosh');
 // You: click input, type, toggle, channels, generate
 you.O.to(b(24.4), 1, SP.text);
-jump(you, 0, 520, 420);
+jump(you, 0, vz(520, 380), vz(420, 640));
 mv(you, b(25), ...w3(330, 182)); click(you, b(25));
 mv(you, b(25.9), ...w3(900, 238), 0.5, SP.soft);
 for (let i = 0; i < BRIEF.length; i++) cue(lerp(TY0, TY1, i / BRIEF.length), 'key', { n: i });
@@ -426,7 +433,7 @@ function drawScene3(t) {
 // button shrinks into the "Drafting" pill (the hero itself)
 const P3 = w3(795, 470);
 heroTo(b(34.3), P3[0], P3[1], 360, 84, 42, '#13795B', SP.card);
-cam(b(34.3), P3[0] - 60, P3[1] - 40, 1.75, { w: 6.5, z: 1 });
+cam(b(34.3), P3[0] - vz(60, 100), P3[1] - 40, vz(1.75, 1.5), { w: 6.5, z: 1 });
 const gPill = group(360, 84);
 const pillTxt = kid(gPill, 0, 0, `<div class="row disp" style="width:360px;height:84px;justify-content:center;gap:16px;color:#fff;font-weight:700;font-size:28px"><svg width="34" height="34" viewBox="0 0 34 34"><circle cx="17" cy="17" r="13" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="4"/><path class="spin" d="M17 4 A13 13 0 0 1 30 17" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/></svg>Drafting with AI…</div>`);
 function drawPill(t) {
@@ -438,7 +445,7 @@ you.O.to(b(34.8), 0, SP.soft);
 // =====================================================================
 // SCENE 4 · AI draft (b36–b46)
 // =====================================================================
-const C4 = { w: 1240, h: 660 }, O4 = { x: -620, y: -310 };
+const C4 = V ? { w: 840, h: 1250 } : { w: 1240, h: 660 }, O4 = { x: -C4.w / 2, y: 20 - C4.h / 2 };
 const g4 = group(C4.w, C4.h);
 const w4 = (x, y) => [O4.x + x, O4.y + y];
 const TITLE = 'Cold Brew at Home: The Complete Beginner’s Guide';
@@ -448,8 +455,8 @@ const s4 = {
   hd: kid(g4, 48, 32, `<div class="row" style="gap:12px"><span class="row" style="height:40px;padding:0 16px;border-radius:20px;background:#EEF2F8;color:var(--ink2);font:600 18px Inter">Draft v1</span><span class="row" style="height:40px;padding:0 16px;border-radius:20px;background:#E5F3EE;color:var(--teal);font:700 18px Inter;gap:8px">✓ Saigon Roast voice</span></div>`),
   title: kid(g4, 48, 98, `<div class="disp" style="width:720px;font-weight:700;font-size:42px;line-height:1.18;letter-spacing:-.8px">${TITLE.split(' ').map(w => `<span class="w" style="display:inline-block">${w}&nbsp;</span>`).join('')}</div>`),
   sapo: kid(g4, 48, 214, `<div style="width:700px;font:400 23px Inter;line-height:1.5;color:var(--ink2)">${SAPO.split(' ').map(w => `<span class="w" style="display:inline-block">${w}&nbsp;</span>`).join('')}</div>`),
-  div: kid(g4, 806, 32, `<div style="width:2px;height:596px;background:#EDF1F7"></div>`),
-  rl: kid(g4, 836, 34, `<div style="font:600 19px Inter;color:var(--gray);line-height:40px">Channel versions</div>`),
+  div: V ? kid(g4, 48, 638, `<div style="width:744px;height:2px;background:#EDF1F7"></div>`) : kid(g4, 806, 32, `<div style="width:2px;height:596px;background:#EDF1F7"></div>`),
+  rl: kid(g4, vz(836, 48), vz(34, 654), `<div style="font:600 19px Inter;color:var(--gray);line-height:40px">Channel versions</div>`),
 };
 const h2Els = H2S.map((h, i) => kid(g4, 48, 330 + i * 98, `<div><div style="font:700 26px Inter;color:var(--ink)">${h}</div><div class="skel" style="left:0;top:44px;width:${[660, 600, 640][i]}px"></div><div class="skel" style="left:0;top:64px;width:${[480, 520, 430][i]}px"></div></div>`));
 const VERS = [
@@ -457,7 +464,7 @@ const VERS = [
   ['LinkedIn', '#0A66C2', 'in', 'Why we teach customers to brew at home, and what it did for loyalty.'],
   ['Instagram', '#E1306C', 'IG', 'Ice. Coffee. Patience. #coldbrew #saigonroast'],
 ];
-const verEls = VERS.map(([n, c, l, x], i) => kid(g4, 836, 92 + i * 184, `<div style="width:356px;height:164px;border-radius:20px;background:var(--soft);border:2px solid #E6ECF5;box-sizing:border-box;padding:18px 20px">
+const verEls = VERS.map(([n, c, l, x], i) => kid(g4, vz(836, 48), V ? 704 + i * 176 : 92 + i * 184, `<div style="width:${vz(356, 744)}px;height:${vz(164, 156)}px;border-radius:20px;background:var(--soft);border:2px solid #E6ECF5;box-sizing:border-box;padding:18px 20px">
   <div class="row" style="gap:10px;font:700 20px Inter"><span class="ico" style="width:32px;height:32px;border-radius:9px;background:${c};font-size:14px">${l}</span>${n}<span style="margin-left:auto;font:600 15px Inter;color:var(--teal)">✓ Ready</span></div>
   <div style="margin-top:12px;font:400 19px Inter;line-height:1.42;color:var(--ink2)">${x}</div></div>`));
 const T4 = { title: b(36.7), titleD: 0.11, sapo: b(38.6), sapoD: 0.07, h2: [b(41), b(41.5), b(42)], ver: [b(42.75), b(43.75), b(44.75)], out: b(45.75) };
@@ -469,7 +476,7 @@ function measure4() { // world-space caret points for the AI cursor
   W4 = { title: tw.map(e => pt(e, { x: 48, y: 98 })), sapo: sw.map(e => pt(e, { x: 48, y: 214 })) };
 }
 heroTo(b(36) - 0.06, 0, 20, C4.w, C4.h, 28, '#FFFFFF', SP.card);
-cam(b(36) - 0.1, 0, 30, 1.13, { w: 6, z: 1 });
+cam(b(36) - 0.1, 0, 30, vz(1.13, 1.06), { w: 6, z: 1 });
 cue(b(36) - 0.06, 'swoosh');
 function schedule4() {
   measure4();
@@ -479,7 +486,7 @@ function schedule4() {
   tw.forEach((p, i) => { mv(ai, T4.title + i * T4.titleD + 0.08, ...w4(p[0] + 16, p[1]), 0.12, SP.fast); cue(T4.title + i * T4.titleD, 'type', { n: i }); });
   sw.forEach((p, i) => { if (i % 2 === 0 || i === sw.length - 1) mv(ai, T4.sapo + i * T4.sapoD + 0.08, ...w4(p[0] + 16, p[1]), 0.14, SP.fast); if (i % 2 === 0) cue(T4.sapo + i * T4.sapoD, 'type', { n: i + 3, g: 0.6 }); });
   T4.h2.forEach((tt, i) => { mv(ai, tt, ...w4(420, 352 + i * 98), 0.25, SP.fast); cue(tt, 'tick', { n: i }); });
-  T4.ver.forEach((tt, i) => { mv(ai, tt, ...w4(1150, 150 + i * 184), 0.4); click(ai, tt, 'drop'); });
+  T4.ver.forEach((tt, i) => { mv(ai, tt, ...(V ? w4(700, 764 + i * 176) : w4(1150, 150 + i * 184)), 0.4); click(ai, tt, 'drop'); });
   ai.O.to(T4.out, 1, SP.text);
 }
 function drawScene4(t) {
@@ -497,26 +504,27 @@ function drawScene4(t) {
 // =====================================================================
 // SCENE 5 · QC (b46–b56)
 // =====================================================================
-const C5 = { w: 1000, h: 560 }, O5 = { x: -500, y: -280 };
+const C5 = V ? { w: 860, h: 1000 } : { w: 1000, h: 560 }, O5 = { x: -C5.w / 2, y: -C5.h / 2 };
+const R5 = V ? { x: 250, y: -20 } : { x: 70, y: 0 }, L5 = V ? { x: 110, y: 470 } : { x: 500, y: 0 };
 const g5 = group(C5.w, C5.h);
 const w5 = (x, y) => [O5.x + x, O5.y + y];
 const CHECKS = ['Spelling & grammar', 'Heading structure', 'Title & meta description', 'Target keywords', 'Image alt text', 'Internal links'];
 const s5 = {
-  ring: kid(g5, 70, 60, `<svg width="360" height="360" viewBox="0 0 360 360"><circle cx="180" cy="180" r="160" fill="none" stroke="#EDF1F7" stroke-width="24"/><circle class="arc" cx="180" cy="180" r="160" fill="none" stroke="#13795B" stroke-width="24" stroke-linecap="round" transform="rotate(-90 180 180)" stroke-dasharray="1005.3 1005.3"/></svg>`),
-  lbl: kid(g5, 70, 166, `<div style="width:360px;text-align:center;font:600 20px Inter;color:var(--gray)">QC score</div>`),
-  num: kid(g5, 70, 196, `<div class="row disp" style="width:360px;justify-content:center;align-items:baseline;gap:4px;font-weight:800;color:var(--ink)"></div>`),
-  of: kid(g5, 70, 296, `<div style="width:360px;text-align:center;font:600 22px Inter;color:var(--gray)">out of 100</div>`),
-  hd: kid(g5, 500, 58, `<div style="font:700 26px Inter">Quality &amp; SEO checklist</div>`),
-  stamp: kid(g5, 135, 452, `<div class="row disp" style="width:230px;height:62px;border-radius:31px;justify-content:center;gap:10px;background:#24B24B;color:#fff;font-weight:700;font-size:24px">✓ Passed QC</div>`),
+  ring: kid(g5, R5.x, 60 + R5.y, `<svg width="360" height="360" viewBox="0 0 360 360"><circle cx="180" cy="180" r="160" fill="none" stroke="#EDF1F7" stroke-width="24"/><circle class="arc" cx="180" cy="180" r="160" fill="none" stroke="#13795B" stroke-width="24" stroke-linecap="round" transform="rotate(-90 180 180)" stroke-dasharray="1005.3 1005.3"/></svg>`),
+  lbl: kid(g5, R5.x, 166 + R5.y, `<div style="width:360px;text-align:center;font:600 20px Inter;color:var(--gray)">QC score</div>`),
+  num: kid(g5, R5.x, 196 + R5.y, `<div class="row disp" style="width:360px;justify-content:center;align-items:baseline;gap:4px;font-weight:800;color:var(--ink)"></div>`),
+  of: kid(g5, R5.x, 296 + R5.y, `<div style="width:360px;text-align:center;font:600 22px Inter;color:var(--gray)">out of 100</div>`),
+  hd: kid(g5, L5.x, 58 + L5.y, `<div style="font:700 26px Inter">Quality &amp; SEO checklist</div>`),
+  stamp: kid(g5, vz(135, 315), vz(452, 418), `<div class="row disp" style="width:230px;height:62px;border-radius:31px;justify-content:center;gap:10px;background:#24B24B;color:#fff;font-weight:700;font-size:24px">✓ Passed QC</div>`),
 };
 const qcOdo = new Odo(s5.num, '92.4', 96, 'disp', 'font-weight:800;letter-spacing:-2px');
-const rows5 = CHECKS.map((c, i) => kid(g5, 500, 118 + i * 64, `<div class="row" style="gap:18px;font:500 24px Inter;color:var(--ink);height:48px">
+const rows5 = CHECKS.map((c, i) => kid(g5, L5.x, 118 + L5.y + i * 64, `<div class="row" style="gap:18px;font:500 24px Inter;color:var(--ink);height:48px">
   <span class="cb" style="width:38px;height:38px;border-radius:50%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;color:#fff;font:800 20px Inter"></span>${c}${i === 5 ? '<span class="add" style="margin-left:6px;height:34px;padding:0 12px;border-radius:17px;background:#E5F3EE;color:var(--teal);font:700 17px Inter;display:inline-flex;align-items:center">+3 added</span>' : ''}</div>`));
 const T5 = { in: b(46.12), score0: b(47.5), score1: b(53.5), ck: CHECKS.map((_, i) => b(48 + i)), stamp: b(54), out: b(55.75) };
 heroTo(b(46) - 0.06, 0, 0, C5.w, C5.h, 30, '#FFFFFF', SP.card);
-cam(b(46) - 0.1, 0, 0, 1.3, { w: 6, z: 1 });
+cam(b(46) - 0.1, 0, 0, vz(1.3, 1.15), { w: 6, z: 1 });
 cue(b(46) - 0.06, 'swoosh');
-T5.ck.forEach((tt, i) => { mv(ai, tt, ...w5(520, 142 + i * 64), 0.32, SP.fast); click(ai, tt, 'check'); });
+T5.ck.forEach((tt, i) => { mv(ai, tt, ...w5(L5.x + 20, 142 + L5.y + i * 64), 0.32, SP.fast); click(ai, tt, 'check'); });
 cue(T5.stamp, 'stamp');
 ai.O.to(T5.ck[5] + 0.6, 0, SP.soft);
 function drawScene5(t) {
@@ -542,42 +550,42 @@ function drawScene5(t) {
 // =====================================================================
 // SCENE 6 · Approval (b56–b68), the build
 // =====================================================================
-const C6 = { w: 1440, h: 450 }, O6 = { x: -720, y: -225 };
+const C6 = V ? { w: 980, h: 520 } : { w: 1440, h: 450 }, O6 = { x: -C6.w / 2, y: -C6.h / 2 };
 const g6 = group(C6.w, C6.h);
 const w6 = (x, y) => [O6.x + x, O6.y + y];
-const STATES = ['Draft', 'Editing', 'Pending approval', 'Approved', 'Scheduled', 'Published'];
-const TRK = { x: 56, y: 156, w: 1328, h: 76 }, IW = TRK.w / 6;
+const STATES = V ? ['Draft', 'Editing', 'Review', 'Approved', 'Scheduled', 'Live'] : ['Draft', 'Editing', 'Pending approval', 'Approved', 'Scheduled', 'Published'];
+const TRK = { x: 56, y: 156, w: vz(1328, 868), h: 76 }, IW = TRK.w / 6;
 const s6 = {
   title: kid(g6, 56, 44, `<div class="disp" style="font-weight:700;font-size:36px;letter-spacing:-.6px">Cold brew at home: a beginner’s guide</div>`),
   sub: kid(g6, 56, 98, `<div style="font:500 21px Inter;color:var(--gray)">v3 · Saigon Roast · Website + 3 channels</div>`),
   trk: kid(g6, TRK.x, TRK.y, `<div style="width:${TRK.w}px;height:${TRK.h}px;border-radius:38px;background:#EEF2F8"><div class="ind" style="position:absolute;top:6px;height:${TRK.h - 12}px;border-radius:32px;background:var(--teal)"></div></div>`),
   who: kid(g6, 56, 276, `<div class="row" style="gap:16px;height:64px"><span class="ico" style="width:52px;height:52px;border-radius:50%;background:#228ECD;font-size:22px">L</span><span style="font:600 23px Inter">Linh Tran <span style="color:var(--gray);font-weight:500">· Approver · reviewing v3</span></span></div>`),
-  rq: kid(g6, 900, 276, `<div class="row" style="width:230px;height:64px;border-radius:20px;border:2px solid var(--line);box-sizing:border-box;justify-content:center;font:600 21px Inter;color:var(--ink2)">Request changes</div>`),
-  ap: kid(g6, 1150, 276, `<div class="row disp" style="width:234px;height:64px;border-radius:20px;background:var(--teal);color:#fff;justify-content:center;gap:10px;font-weight:700;font-size:24px">✓ Approve</div>`),
-  sch: kid(g6, 1000, 276, `<div class="row" style="width:384px;height:64px;border-radius:20px;border:2px solid var(--teal);box-sizing:border-box;justify-content:center;gap:12px;font:700 21px Inter;color:var(--teal)"><span>◷</span>Schedule · Tomorrow 8:00 AM</div>`),
-  log: kid(g6, 56, 372, `<div class="row" style="gap:12px;font:500 20px Inter;color:var(--ink2)"><span style="color:var(--teal);font-weight:800">✓</span>Approved by Linh · 15:30 · v3 <span class="lg2" style="margin-left:18px;color:var(--gray)">→ Scheduled · Tomorrow 8:00 AM</span></div>`),
+  rq: kid(g6, vz(900, 450), vz(276, 350), `<div class="row" style="width:230px;height:64px;border-radius:20px;border:2px solid var(--line);box-sizing:border-box;justify-content:center;font:600 21px Inter;color:var(--ink2)">Request changes</div>`),
+  ap: kid(g6, vz(1150, 700), vz(276, 350), `<div class="row disp" style="width:234px;height:64px;border-radius:20px;background:var(--teal);color:#fff;justify-content:center;gap:10px;font-weight:700;font-size:24px">✓ Approve</div>`),
+  sch: kid(g6, vz(1000, 550), vz(276, 350), `<div class="row" style="width:384px;height:64px;border-radius:20px;border:2px solid var(--teal);box-sizing:border-box;justify-content:center;gap:12px;font:700 21px Inter;color:var(--teal)"><span>◷</span>Schedule · Tomorrow 8:00 AM</div>`),
+  log: kid(g6, 56, vz(372, 446), `<div class="row" style="gap:12px;font:500 20px Inter;color:var(--ink2)"><span style="color:var(--teal);font-weight:800">✓</span>Approved by Linh · 15:30 · v3 <span class="lg2" style="margin-left:18px;color:var(--gray)">→ Scheduled · Tomorrow 8:00 AM</span></div>`),
 };
-const stEls = STATES.map((s, i) => mk(`<div style="position:absolute;top:0;left:${i * IW}px;width:${IW}px;height:${TRK.h}px;display:flex;align-items:center;justify-content:center;font:600 21px Inter;white-space:nowrap">${s}</div>`, s6.trk));
+const stEls = STATES.map((s, i) => mk(`<div style="position:absolute;top:0;left:${i * IW}px;width:${IW}px;height:${TRK.h}px;display:flex;align-items:center;justify-content:center;font:600 ${vz(21, 19)}px Inter;white-space:nowrap">${s}</div>`, s6.trk));
 const T6 = { in: b(56.12), st: [[b(56), 1], [b(57), 2], [b(60), 3], [b(62.5), 4]], ap: b(60), sch: b(62.5), push: b(64), out: b(65.4) };
 const indL = new Track(IW * 0 + 4), indR = new Track(IW * 1 - 4);
 for (const [tt, k] of T6.st) { indL.to(tt, IW * k + 4, SP.trail); indR.to(tt, IW * (k + 1) - 4, SP.lead); }
 heroTo(b(56) - 0.06, 0, 0, C6.w, C6.h, 30, '#FFFFFF', SP.card);
-cam(b(56) - 0.1, 0, 0, 1.18, { w: 6, z: 1 });
+cam(b(56) - 0.1, 0, 0, vz(1.18, 1.05), { w: 6, z: 1 });
 cue(b(56) - 0.06, 'swoosh');
 T6.st.slice(1).forEach(([tt]) => cue(tt, 'slide'));
 // Linh drives the approval
 you.labels.push([b(57.4), 'Linh · Approver']);
-jump(you, b(57), 760, 420);
+jump(you, b(57), vz(760, 440), vz(420, 760));
 you.O.to(b(58), 1, SP.text);
-mv(you, T6.ap, ...w6(1270, 310), 0.6); click(you, T6.ap, 'approve');
-mv(you, T6.sch, ...w6(1250, 310), 0.5); click(you, T6.sch);
+mv(you, T6.ap, ...w6(vz(1270, 820), vz(310, 384)), 0.6); click(you, T6.ap, 'approve');
+mv(you, T6.sch, ...w6(vz(1250, 800), vz(310, 384)), 0.5); click(you, T6.sch);
 // push in on "Published": the card becomes the Publish button
 const PUB = w6(TRK.x + IW * 5.5, TRK.y + TRK.h / 2);
-cam(T6.push, PUB[0] - 120, PUB[1], 1.75, { w: 3.2, z: 1 });
+cam(T6.push, PUB[0] - vz(120, 60), PUB[1], vz(1.75, 1.6), { w: 3.2, z: 1 });
 mv(you, b(65.2), PUB[0] + 160, PUB[1] + 70, 0.8, SP.soft);
 heroTo(T6.out + 0.05, PUB[0], PUB[1], 440, 132, 66, '#13795B', SP.card);
 HS.to(T6.out + 0.05, 1);
-cam(T6.out + 0.1, PUB[0], PUB[1] + 10, 1.55, { w: 5, z: 1 });
+cam(T6.out + 0.1, PUB[0], PUB[1] + 10, vz(1.55, 1.45), { w: 5, z: 1 });
 const gBtn = group(440, 132);
 const pubTxt = kid(gBtn, 0, 0, `<div class="row disp" style="width:440px;height:132px;justify-content:center;gap:18px;color:#fff;font-weight:800;font-size:44px;letter-spacing:-.5px">Publish now <svg width="40" height="40" viewBox="0 0 40 40"><path d="M6 20 H32 M22 9 L33 20 L22 31" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`);
 mv(you, b(67.4), PUB[0] + 70, PUB[1] + 20, 0.7, SP.soft);
@@ -613,7 +621,8 @@ const CHANNELS = [
   ['Your website', '#19479D', 'W', 'saigonroast.vn'], ['WordPress', '#21759B', 'Wp', 'blog.saigonroast.vn'], ['Facebook', '#1877F2', 'f', '@saigonroast'],
   ['LinkedIn', '#0A66C2', 'in', 'Saigon Roast'], ['Instagram', '#E1306C', 'IG', '@saigonroast'], ['X', '#111111', 'X', '@saigonroast'],
 ];
-const SLOTS = [[-1, 0], [0, 0], [1, 0], [-1, 1], [0, 1], [1, 1]].map(([i, j]) => [G.x + i * PX, G.y - PY / 2 + j * PY]);
+const COL0 = vz(0, -PX / 2), ROW0 = vz(-PY / 2, -PY);
+const SLOTS = (V ? [[0, 0], [1, 0], [0, 1], [1, 1], [0, 2], [1, 2]] : [[-1, 0], [0, 0], [1, 0], [-1, 1], [0, 1], [1, 1]]).map(([i, j]) => [G.x + COL0 + i * PX, G.y + ROW0 + j * PY]);
 function glass(scale = 1) {
   return `<svg width="${476 * scale}" height="${190 * scale}" viewBox="0 0 476 190"><rect width="476" height="190" rx="16" fill="#F2E6D8"/>
     <circle cx="380" cy="60" r="70" fill="#EAD8C4"/><rect x="40" y="150" width="400" height="14" rx="7" fill="#E6D3BE"/>
@@ -639,25 +648,25 @@ heroCard.style.boxShadow = 'none';
 const T7 = { c: CHANNELS.map((_, i) => b(68 + i)), pull: b(76), push: b(81.5), out: b(82.6) };
 // hero: Publish button → first channel card
 heroTo(b(68), SLOTS[0][0], SLOTS[0][1], CW, CHh, 26, '#FFFFFF', SP.card);
-cam(b(68), G.x, G.y + 30, 0.86, { w: 7, z: 1 });
+cam(b(68), G.x, G.y + vz(30, 0), 0.86, { w: 7, z: 1 });
 T7.c.forEach((tt, i) => { cue(tt, 'slam', { n: i }); cue(tt + 0.25, 'tick', { n: i + 2, g: 0.5 }); });
 you.O.to(b(68.6), 0, SP.soft);
-const cap7 = mk(`<div class="abs disp" style="width:1920px;top:962px;text-align:center;font-weight:800;font-size:52px;letter-spacing:-1.2px;color:var(--navy)">One click. Every channel.</div>`, hud);
+const cap7 = mk(`<div class="abs disp" style="width:${SW}px;top:${vz(962, 1520)}px;text-align:center;font-weight:800;font-size:52px;letter-spacing:-1.2px;color:var(--navy)">One click. Every channel.</div>`, hud);
 // the wall
 const wall = mk(`<div class="abs"></div>`, world);
 const tiles = [];
 const TCOL = ['#19479D', '#21759B', '#1877F2', '#0A66C2', '#E1306C', '#111111', '#24B24B', '#228ECD'];
-for (let j = -8; j <= 9; j++) for (let i = -12; i <= 12; i++) {
-  const sl = SLOTS.findIndex(([x, y]) => Math.abs(x - (G.x + i * PX)) < 1 && Math.abs(y - (G.y - PY / 2 + j * PY)) < 1);
+for (let j = vz(-8, -13); j <= vz(9, 15); j++) for (let i = vz(-12, -7); i <= vz(12, 8); i++) {
+  const sl = SLOTS.findIndex(([x, y]) => Math.abs(x - (G.x + COL0 + i * PX)) < 1 && Math.abs(y - (G.y + ROW0 + j * PY)) < 1);
   if (sl >= 0) continue;
-  const d = Math.hypot(i, (j - 0.5) * 1.2), k = Math.abs((i * 7 + j * 13) % 8);
+  const d = V ? Math.hypot(i - 0.5, (j - 1) * 1.2) : Math.hypot(i, (j - 0.5) * 1.2), k = Math.abs((i * 7 + j * 13) % 8);
   const el = mk(`<div class="abs" style="width:${CW}px;height:${CHh}px;border-radius:26px;background:#fff;box-sizing:border-box;padding:28px;box-shadow:0 18px 50px rgba(25,71,157,.10)">
     <div class="row" style="gap:16px"><span style="width:56px;height:56px;border-radius:15px;background:${TCOL[k]}"></span><span style="width:${150 + (k * 37) % 140}px;height:20px;border-radius:10px;background:#E6ECF5"></span>
     <span style="margin-left:auto;width:90px;height:40px;border-radius:20px;background:#E3F5E8"></span></div>
     <div style="margin-top:22px;height:170px;border-radius:16px;background:${['#F2E6D8', '#E3EEF9', '#E3F5E8', '#FCEBDD'][k % 4]}"></div>
     <div style="margin-top:22px;width:${300 + (k * 53) % 150}px;height:22px;border-radius:11px;background:#DCE4EF"></div>
     <div style="margin-top:14px;width:${200 + (k * 29) % 120}px;height:22px;border-radius:11px;background:#E6ECF5"></div></div>`, wall);
-  el.style.transform = `translate(${G.x + i * PX - CW / 2}px,${G.y - PY / 2 + j * PY - CHh / 2}px)`;
+  el.style.transform = `translate(${G.x + COL0 + i * PX - CW / 2}px,${G.y + ROW0 + j * PY - CHh / 2}px)`;
   tiles.push({ el, d });
 }
 const plate = mk(`<div class="abs" style="width:700px;height:300px;border-radius:44px;background:#fff;box-shadow:0 30px 90px rgba(14,27,61,.20);display:flex;flex-direction:column;align-items:center;justify-content:center"></div>`, hud);
@@ -694,7 +703,7 @@ function drawScene7(t) {
     el.style.visibility = 'visible'; el.style.opacity = e.toFixed(3);
   });
   if (show(plate, vis(t, b(77), b(81.3), 0.16, 0), `scale(${lerp(0.8, 1, stepR(t - b(77), SP.pop)).toFixed(4)})`)) {
-    plate.style.transform = `translate(610px,390px) ${plate.style.transform}`;
+    plate.style.transform = `translate(${SCX - 350}px,${SCY - 150}px) ${plate.style.transform}`;
     pubOdo.set(outQ((t - b(77.2)) / 2.6));
   }
 }
@@ -702,19 +711,20 @@ function drawScene7(t) {
 // =====================================================================
 // SCENE 8 · Measure (b84–b100)
 // =====================================================================
-const C8 = { w: 1520, h: 800 }, O8 = { x: P1[0] - 760, y: P1[1] - 400 };
+const C8 = V ? { w: 996, h: 1410 } : { w: 1520, h: 800 }, O8 = { x: P1[0] - C8.w / 2, y: P1[1] - C8.h / 2 };
+const CHART_Y = vz(316, 500), TOP = V ? { x: 48, y: 970, w: 900, h: 400 } : { x: 972, y: 316, w: 500, h: 446 }, TW = TOP.w - 56;
 const g8 = group(C8.w, C8.h);
 const w8 = (x, y) => [O8.x + x, O8.y + y];
 const KPIS = [['Views', '24K', '30%', '#228ECD', '◉'], ['Likes', '1.2K', '49%', '#24B24B', '♥'], ['Comments', '2K', '12%', '#19479D', '❝'], ['Shares', '4K', '3%', '#F4A04C', '↗']];
 const s8 = {
   hd: kid(g8, 48, 34, `<div class="disp" style="font-weight:700;font-size:36px;letter-spacing:-.6px">Performance</div>`),
   sub: kid(g8, 48, 84, `<div style="font:500 20px Inter;color:var(--gray)">Last 30 days · all channels</div>`),
-  chs: kid(g8, 1160, 44, `<div class="row" style="gap:10px">${CHANNELS.map(([, c, l]) => `<span class="ico" style="width:44px;height:44px;border-radius:12px;background:${c};font-size:${l.length > 1 ? 15 : 19}px">${l}</span>`).join('')}</div>`),
-  chart: kid(g8, 48, 316, `<div style="width:900px;height:446px;border-radius:22px;background:var(--soft);border:2px solid #E9EEF6;box-sizing:border-box"></div>`),
-  top: kid(g8, 972, 316, `<div style="width:500px;height:446px;border-radius:22px;background:var(--soft);border:2px solid #E9EEF6;box-sizing:border-box;padding:26px 28px"><div style="font:700 22px Inter">Top content</div></div>`),
+  chs: kid(g8, vz(1160, 634), 44, `<div class="row" style="gap:10px">${CHANNELS.map(([, c, l]) => `<span class="ico" style="width:44px;height:44px;border-radius:12px;background:${c};font-size:${l.length > 1 ? 15 : 19}px">${l}</span>`).join('')}</div>`),
+  chart: kid(g8, 48, CHART_Y, `<div style="width:900px;height:446px;border-radius:22px;background:var(--soft);border:2px solid #E9EEF6;box-sizing:border-box"></div>`),
+  top: kid(g8, TOP.x, TOP.y, `<div style="width:${TOP.w}px;height:${TOP.h}px;border-radius:22px;background:var(--soft);border:2px solid #E9EEF6;box-sizing:border-box;padding:26px 28px"><div style="font:700 22px Inter">Top content</div></div>`),
 };
 const kpiEls = KPIS.map(([n, v, d, c, ic], i) => {
-  const el = kid(g8, 48 + i * 362, 132, `<div style="width:340px;height:156px;border-radius:22px;background:var(--soft);border:2px solid #E9EEF6;box-sizing:border-box;padding:22px 24px">
+  const el = kid(g8, V ? 48 + (i % 2) * 460 : 48 + i * 362, V ? 132 + Math.floor(i / 2) * 176 : 132, `<div style="width:${vz(340, 440)}px;height:156px;border-radius:22px;background:var(--soft);border:2px solid #E9EEF6;box-sizing:border-box;padding:22px 24px">
     <div class="row" style="gap:12px;font:600 21px Inter;color:var(--gray)"><span class="ico" style="width:38px;height:38px;border-radius:50%;background:${c}1F;color:${c};font-size:19px">${ic}</span>${n}</div>
     <div class="row vrow" style="margin-top:14px;gap:16px;align-items:center"></div></div>`);
   const vr = el.querySelector('.vrow');
@@ -742,24 +752,24 @@ const chartSvg = mk(`<svg class="abs" width="900" height="446" style="left:0;top
 const PK = 22, PKX = CHX + CHW * PK / (NPT - 1), PKY = CHY + CHH * (1 - S2[PK]);
 const tip = kid(s8.chart, PKX - 150, PKY - 118, `<div style="width:300px;height:86px;border-radius:16px;background:#0E1B3D;color:#fff;box-sizing:border-box;padding:14px 18px"><div style="font:700 19px Inter">Cold brew at home</div><div style="font:500 17px Inter;color:#B9C6DA;margin-top:4px">8.4K views · Website + 3 channels</div></div>`);
 const TOPS = [['Cold brew at home: guide', 'Likes', 0.92, '#13795B'], ['Product intro video', 'Views', 0.74, '#228ECD'], ['Barista tips & stories', 'Comments', 0.58, '#19479D']];
-const topEls = TOPS.map(([n, ty, f, c], i) => mk(`<div class="abs" style="left:28px;top:${84 + i * 116}px;width:444px">
+const topEls = TOPS.map(([n, ty, f, c], i) => mk(`<div class="abs" style="left:28px;top:${84 + i * vz(116, 104)}px;width:${TW}px">
   <div class="row" style="gap:12px"><span class="row disp" style="width:40px;height:40px;border-radius:12px;background:${c}1A;color:${c};justify-content:center;font-weight:800;font-size:18px">#${i + 1}</span>
   <div><div style="font:600 21px Inter">${n}</div><div style="font:500 16px Inter;color:var(--gray)">${ty}</div></div></div>
   <div style="margin-top:14px;height:12px;border-radius:6px;background:#E3E9F2"><div class="fill" style="height:12px;border-radius:6px;background:${c}"></div></div></div>`, s8.top));
 const T8 = { in: b(83), k: [b(84), b(85), b(86), b(87)], c0: b(88), c1: b(90.5), hov: b(92.3), top: [b(94), b(95), b(96)], out: b(99.6) };
 heroTo(b(82.6), P1[0], P1[1], C8.w, C8.h, 30, '#FFFFFF', SP.card);
 HS.to(b(82.6), 1);
-cam(b(82.4), P1[0], P1[1] + 10, 1.09, { w: 5, z: 1 });
+cam(b(82.4), P1[0], P1[1] + 10, vz(1.09, 0.95), { w: 5, z: 1 });
 cue(b(82.6), 'swoosh');
 T8.k.forEach((tt, i) => { cue(tt, 'slam', { n: i + 1, g: 0.55 }); cue(tt + 0.05, 'roll', { d: 0.8, g: 0.5 }); });
 cue(T8.c0, 'draw', { d: 2.5 });
 T8.top.forEach((tt, i) => cue(tt, 'tick', { n: 4 + i }));
 you.labels.push([b(88), 'You']);
-jump(you, b(88), P1[0] + 700, P1[1] + 500);
+jump(you, b(88), P1[0] + vz(700, 420), P1[1] + vz(500, 900));
 you.O.to(b(90.5), 1, SP.text);
-const PKW = w8(48 + PKX, 316 + PKY);
+const PKW = w8(48 + PKX, CHART_Y + PKY);
 mv(you, T8.hov, PKW[0] + 12, PKW[1] + 26, 0.7, SP.soft); cue(T8.hov, 'blip', { n: 4 });
-T8.top.forEach((tt, i) => mv(you, tt, ...w8(972 + 380, 316 + 84 + i * 116 + 64), 0.4));
+T8.top.forEach((tt, i) => mv(you, tt, ...w8(TOP.x + TOP.w - 120, TOP.y + 84 + i * vz(116, 104) + 64), 0.4));
 you.O.to(b(97.5), 0, SP.soft);
 function drawScene8(t) {
   if (t < b(82.3) || t > b(100.5)) { g8.style.display = 'none'; return; }
@@ -777,42 +787,43 @@ function drawScene8(t) {
   dot.setAttribute('cx', PKX); dot.setAttribute('cy', PKY); dot.style.opacity = hv.o;
   dot.setAttribute('r', (11 * lerp(0.3, 1, stepR(t - T8.hov, SP.pop))).toFixed(2));
   show(tip, vis(t, T8.hov + 0.08, out, 0.12, 12));
-  topEls.forEach((el, i) => { show(el, vis(t, T8.top[i] - 0.25, out)); el.querySelector('.fill').style.width = (444 * TOPS[i][2] * outQ((t - T8.top[i]) / 0.7)).toFixed(1) + 'px'; });
+  topEls.forEach((el, i) => { show(el, vis(t, T8.top[i] - 0.25, out)); el.querySelector('.fill').style.width = (TW * TOPS[i][2] * outQ((t - T8.top[i]) / 0.7)).toFixed(1) + 'px'; });
 }
 
 // =====================================================================
 // SCENE 9 · AI cost (b100–b108)
 // =====================================================================
-const C9 = { w: 1240, h: 620 }, O9 = { x: P1[0] - 620, y: P1[1] - 310 };
+const C9 = V ? { w: 996, h: 940 } : { w: 1240, h: 620 }, O9 = { x: P1[0] - C9.w / 2, y: P1[1] - C9.h / 2 };
+const BW = vz(1144, 900), DY9 = vz(0, 124);
 const g9 = group(C9.w, C9.h);
 const w9 = (x, y) => [O9.x + x, O9.y + y];
 const PROV = [['Anthropic Claude', 0.46, '#228ECD'], ['OpenAI', 0.22, '#19479D'], ['Google Gemini', 0.22, '#24B24B'], ['DeepSeek', 0.10, '#F4A04C']];
 const s9 = {
   hd: kid(g9, 48, 40, `<div class="disp" style="font-weight:700;font-size:38px;letter-spacing:-.6px">AI usage</div>`),
   sub: kid(g9, 48, 94, `<div style="font:500 20px Inter;color:var(--gray)">Last 30 days · all projects</div>`),
-  tk: kid(g9, 640, 36, `<div><div style="font:600 19px Inter;color:var(--gray)">Tokens</div><div class="v"></div></div>`),
-  cs: kid(g9, 950, 36, `<div><div style="font:600 19px Inter;color:var(--gray)">Est. cost</div><div class="v"></div></div>`),
-  bar: kid(g9, 48, 176, `<div style="width:1144px;height:52px;border-radius:26px;background:#EEF2F8;overflow:hidden;display:flex;gap:4px"></div>`),
-  lg: kid(g9, 48, 252, `<div class="row" style="gap:40px;font:600 20px Inter;color:var(--ink2)">${PROV.map(([n, f, c]) => `<span class="row" style="gap:10px"><span style="width:14px;height:14px;border-radius:50%;background:${c}"></span>${n} <span style="color:var(--gray);font-weight:500">${Math.round(f * 100)}%</span></span>`).join('')}</div>`),
-  ml: kid(g9, 48, 336, `<div style="font:600 19px Inter;color:var(--gray)">Default model · Saigon Roast</div>`),
-  dd: kid(g9, 48, 370, `<div class="row" style="width:440px;height:76px;border-radius:20px;border:2px solid var(--line);box-sizing:border-box;padding:0 24px;gap:14px;font:600 25px Inter;background:#fff"><span class="mdot" style="width:14px;height:14px;border-radius:50%"></span><span class="mn" style="position:relative;display:inline-block;width:300px;height:32px"><span class="m1 abs">Claude Sonnet</span><span class="m2 abs">Gemini Flash</span></span><span style="margin-left:auto;color:var(--gray)">⌄</span></div>`),
-  menu: kid(g9, 48, 454, `<div style="width:440px;border-radius:20px;background:#fff;box-shadow:0 20px 60px rgba(14,27,61,.16);padding:8px;box-sizing:border-box;font:600 22px Inter">${['GPT-4.1 mini', 'Gemini Flash', 'DeepSeek V3'].map((m, i) => `<div class="mo row" style="height:52px;padding:0 18px;border-radius:14px;gap:12px"><span style="width:12px;height:12px;border-radius:50%;background:${['#19479D', '#24B24B', '#F4A04C'][i]}"></span>${m}</div>`).join('')}</div>`),
-  msg: kid(g9, 560, 386, `<div class="disp" style="width:620px;font-weight:700;font-size:34px;line-height:1.25;letter-spacing:-.6px;color:var(--navy)">Switch models anytime.<br><span style="color:var(--ink)">No vendor lock-in.</span></div>`),
+  tk: kid(g9, vz(640, 48), vz(36, 150), `<div><div style="font:600 19px Inter;color:var(--gray)">Tokens</div><div class="v"></div></div>`),
+  cs: kid(g9, vz(950, 420), vz(36, 150), `<div><div style="font:600 19px Inter;color:var(--gray)">Est. cost</div><div class="v"></div></div>`),
+  bar: kid(g9, 48, 176 + vz(0, 96), `<div style="width:${BW}px;height:52px;border-radius:26px;background:#EEF2F8;overflow:hidden;display:flex;gap:4px"></div>`),
+  lg: kid(g9, 48, 252 + vz(0, 96), `<div class="row" style="width:${BW}px;flex-wrap:wrap;row-gap:12px;column-gap:${vz(40, 36)}px;font:600 20px Inter;color:var(--ink2)">${PROV.map(([n, f, c]) => `<span class="row" style="gap:10px"><span style="width:14px;height:14px;border-radius:50%;background:${c}"></span>${n} <span style="color:var(--gray);font-weight:500">${Math.round(f * 100)}%</span></span>`).join('')}</div>`),
+  ml: kid(g9, 48, 336 + DY9, `<div style="font:600 19px Inter;color:var(--gray)">Default model · Saigon Roast</div>`),
+  dd: kid(g9, 48, 370 + DY9, `<div class="row" style="width:440px;height:76px;border-radius:20px;border:2px solid var(--line);box-sizing:border-box;padding:0 24px;gap:14px;font:600 25px Inter;background:#fff"><span class="mdot" style="width:14px;height:14px;border-radius:50%"></span><span class="mn" style="position:relative;display:inline-block;width:300px;height:32px"><span class="m1 abs">Claude Sonnet</span><span class="m2 abs">Gemini Flash</span></span><span style="margin-left:auto;color:var(--gray)">⌄</span></div>`),
+  menu: kid(g9, 48, 454 + DY9, `<div style="width:440px;border-radius:20px;background:#fff;box-shadow:0 20px 60px rgba(14,27,61,.16);padding:8px;box-sizing:border-box;font:600 22px Inter">${['GPT-4.1 mini', 'Gemini Flash', 'DeepSeek V3'].map((m, i) => `<div class="mo row" style="height:52px;padding:0 18px;border-radius:14px;gap:12px"><span style="width:12px;height:12px;border-radius:50%;background:${['#19479D', '#24B24B', '#F4A04C'][i]}"></span>${m}</div>`).join('')}</div>`),
+  msg: kid(g9, vz(560, 48), vz(386, 800), `<div class="disp" style="width:620px;font-weight:700;font-size:34px;line-height:1.25;letter-spacing:-.6px;color:var(--navy)">Switch models anytime.<br><span style="color:var(--ink)">No vendor lock-in.</span></div>`),
 };
 const segs = PROV.map(([, f, c]) => mk(`<div style="height:52px;background:${c};flex:none"></div>`, s9.bar));
 const tokOdo = new Odo(s9.tk.querySelector('.v'), '315,502', 54, 'disp', 'font-weight:800;letter-spacing:-1.5px');
 const costOdo = new Odo(s9.cs.querySelector('.v'), '$2.32', 54, 'disp', 'font-weight:800;letter-spacing:-1.5px;color:var(--teal)');
 const T9 = { in: b(100.05), seg: PROV.map((_, i) => b(100.6 + i * 0.5)), odo0: b(100.6), dd: b(103.5), pick: b(105), msg: b(105.6), out: b(107.3) };
 heroTo(b(99.9), P1[0], P1[1], C9.w, C9.h, 30, '#FFFFFF', SP.card);
-cam(b(99.8), P1[0], P1[1], 1.22, { w: 6, z: 1 });
+cam(b(99.8), P1[0], P1[1], vz(1.22, 1.08), { w: 6, z: 1 });
 cue(b(99.9), 'swoosh');
 T9.seg.forEach((tt, i) => cue(tt, 'blip', { n: i + 1 }));
 cue(T9.odo0, 'roll', { d: 2.0, g: 0.6 });
 you.O.to(b(102.4), 1, SP.text);
-jump(you, b(101), P1[0] + 300, P1[1] + 420);
-mv(you, T9.dd, ...w9(330, 408), 0.6); click(you, T9.dd);
-mv(you, T9.pick, ...w9(250, 454 + 8 + 52 + 26), 0.45); click(you, T9.pick);
-mv(you, b(106.4), ...w9(420, 560), 0.4, SP.soft);
+jump(you, b(101), P1[0] + 300, P1[1] + vz(420, 700));
+mv(you, T9.dd, ...w9(330, 408 + DY9), 0.6); click(you, T9.dd);
+mv(you, T9.pick, ...w9(250, 454 + DY9 + 8 + 52 + 26), 0.45); click(you, T9.pick);
+mv(you, b(106.4), ...w9(vz(420, 600), vz(560, 720)), 0.4, SP.soft);
 cue(T9.msg, 'chime');
 you.O.to(b(106.8), 0, SP.soft);
 function drawScene9(t) {
@@ -821,7 +832,7 @@ function drawScene9(t) {
   const out = T9.out;
   [s9.hd, s9.sub, s9.tk, s9.cs, s9.bar, s9.lg, s9.ml].forEach((el, i) => show(el, vis(t, T9.in + i * 0.04, out)));
   show(s9.dd, vis(t, T9.in + 0.3, out), `scale(${press(t, T9.dd).toFixed(4)})`);
-  segs.forEach((el, i) => { el.style.width = (1144 * PROV[i][1] * stepR(t - T9.seg[i], SP.card) - 4).toFixed(1) + 'px'; });
+  segs.forEach((el, i) => { el.style.width = (BW * PROV[i][1] * stepR(t - T9.seg[i], SP.card) - 4).toFixed(1) + 'px'; });
   const u = outQ((t - T9.odo0) / 2.0); tokOdo.set(u); costOdo.set(u);
   const mo = vis(t, T9.dd + 0.08, T9.pick + 0.12, 0.12, -10);
   show(s9.menu, mo);
@@ -841,15 +852,16 @@ HS.to(b(107.5), 0, SP.soft);
 cue(b(107.4), 'suck');
 lockup(b(108), END.x, END.y);
 cam(b(107.5), P1[0], P1[1], 1.12, { w: 5, z: 1 });
-cam(b(108) - 0.05, END.x, END.y + 70, 1.04, { w: 14, z: 0.7 });
-cam(b(108.6), END.x, END.y + 70, 1.0, { w: 2.5, z: 1 });
-const tag = mk(`<div class="abs disp" style="width:1600px;text-align:center;font-weight:700;font-size:50px;letter-spacing:-1px;color:var(--ink)">Turn AI into your marketing operations system.</div>`, world);
-const contact = mk(`<div class="abs row" style="width:1600px;justify-content:center;gap:28px;font:600 30px Inter;color:var(--navy)"><span>aipower.vn</span><span style="width:8px;height:8px;border-radius:50%;background:var(--green)"></span><span style="color:var(--ink2);font-weight:500">contact@aipower.vn</span></div>`, world);
+cam(b(108) - 0.05, END.x, END.y + vz(70, 120), 1.04, { w: 14, z: 0.7 });
+cam(b(108.6), END.x, END.y + vz(70, 120), 1.0, { w: 2.5, z: 1 });
+const W10 = vz(1600, 900);
+const tag = mk(`<div class="abs disp" style="width:${W10}px;text-align:center;font-weight:700;font-size:${vz(50, 58)}px;line-height:1.2;letter-spacing:-1px;color:var(--ink)">Turn AI into your marketing operations system.</div>`, world);
+const contact = mk(`<div class="abs row" style="width:${W10}px;justify-content:center;gap:28px;font:600 30px Inter;color:var(--navy)"><span>aipower.vn</span><span style="width:8px;height:8px;border-radius:50%;background:var(--green)"></span><span style="color:var(--ink2);font-weight:500">contact@aipower.vn</span></div>`, world);
 cue(b(111), 'chime'); cue(b(113), 'blip', { n: 5 });
 function drawScene10(t) {
   if (t < b(110)) { tag.style.visibility = contact.style.visibility = 'hidden'; return; }
-  show(tag, vis(t, b(111), null, 0.12, 18), ''); tag.style.transform = `translate(${END.x - 800}px,${END.y + 210 + vis(t, b(111), null, 0.12, 18).dy}px)`;
-  show(contact, vis(t, b(113), null, 0.12, 18)); contact.style.transform = `translate(${END.x - 800}px,${END.y + 300 + vis(t, b(113), null, 0.12, 18).dy}px)`;
+  show(tag, vis(t, b(111), null, 0.12, 18), ''); tag.style.transform = `translate(${END.x - W10 / 2}px,${END.y + 210 + vis(t, b(111), null, 0.12, 18).dy}px)`;
+  show(contact, vis(t, b(113), null, 0.12, 18)); contact.style.transform = `translate(${END.x - W10 / 2}px,${END.y + vz(300, 390) + vis(t, b(113), null, 0.12, 18).dy}px)`;
 }
 
 // =====================================================================
@@ -857,9 +869,10 @@ function drawScene10(t) {
 // =====================================================================
 const STEPS = ['Brief', 'AI draft', 'QC', 'Approve', 'Publish', 'Measure', 'AI cost'];
 const STEP_T = [b(24), b(36), b(46), b(56), b(68), b(84), b(100)];
-const rail = mk(`<div class="abs row" style="height:56px;padding:0 6px;border-radius:28px;background:rgba(255,255,255,.92);box-shadow:0 10px 30px rgba(25,71,157,.10);font:600 19px Inter">
-  <div class="rind" style="position:absolute;top:6px;height:44px;border-radius:22px;background:#0E1B3D"></div>
-  ${STEPS.map((s, i) => `<span class="rs" style="position:relative;padding:0 22px;line-height:56px">${String(i + 1).padStart(2, '0')}&nbsp;&nbsp;${s}</span>`).join('')}</div>`, hud);
+const RH = vz(56, 54);
+const rail = mk(`<div class="abs row" style="height:${RH}px;padding:0 6px;border-radius:${RH / 2}px;background:rgba(255,255,255,.92);box-shadow:0 10px 30px rgba(25,71,157,.10);font:600 ${vz(19, 17.5)}px Inter">
+  <div class="rind" style="position:absolute;top:6px;height:${RH - 12}px;border-radius:${RH / 2 - 6}px;background:#0E1B3D"></div>
+  ${STEPS.map((s, i) => `<span class="rs" style="position:relative;padding:0 ${vz(22, 10)}px;line-height:${RH}px">${String(i + 1).padStart(2, '0')}&nbsp;&nbsp;${s}</span>`).join('')}</div>`, hud);
 let RAIL = null;
 const rL = new Track(0), rR = new Track(0);
 function measureRail() {
@@ -869,7 +882,7 @@ function measureRail() {
 }
 function drawRail(t) {
   if (!show(rail, vis(t, b(24.4), b(107.2), 0.15, -14))) return;
-  rail.style.transform = `translate(${960 - rail.offsetWidth / 2}px,${28 + vis(t, b(24.4), b(107.2), 0.15, -14).dy}px)`;
+  rail.style.transform = `translate(${SCX - rail.offsetWidth / 2}px,${vz(28, 150) + vis(t, b(24.4), b(107.2), 0.15, -14).dy}px)`;
   const L = rL.at(t), R = rR.at(t), ind = rail.querySelector('.rind');
   ind.style.left = (L + 2) + 'px'; ind.style.width = (R - L - 4) + 'px';
   [...rail.querySelectorAll('.rs')].forEach((el, i) => {
@@ -884,7 +897,7 @@ function seek(t) {
   t = clamp(t, 0, DUR);
   drawBg(t);
   const c = camAt(t);
-  world.style.transform = `translate(960px,540px) scale(${c.z.toFixed(5)}) translate(${(-c.x).toFixed(3)}px,${(-c.y).toFixed(3)}px)`;
+  world.style.transform = `translate(${SCX}px,${SCY}px) scale(${c.z.toFixed(5)}) translate(${(-c.x).toFixed(3)}px,${(-c.y).toFixed(3)}px)`;
   drawHero(t);
   drawScene1(t); drawScene2(t); drawScene3(t); drawPill(t); drawScene4(t); drawScene5(t); drawScene6(t);
   drawScene7(t); drawScene8(t); drawScene9(t); drawScene10(t); drawRail(t);

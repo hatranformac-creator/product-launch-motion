@@ -10,8 +10,8 @@ const subT = i => Math.floor(i / SUB) / FPS + ((i % SUB) - 1.5) / (FPS * SUB);
 let browser, page;
 async function open() {
   if (browser) await browser.close().catch(() => {});
-  browser = await chromium.launch(); page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
-  await page.goto('http://127.0.0.1:8765/index.html');
+  browser = await chromium.launch(); page = await browser.newPage({ viewport: (process.env.VERT ? { width: 1080, height: 1920 } : { width: 1920, height: 1080 }) });
+  await page.goto('http://127.0.0.1:8765/index.html' + (process.env.VERT ? '?v=1' : ''));
   await page.waitForFunction(() => window.READY === true, null, { timeout: 60000 });
 }
 await open();
