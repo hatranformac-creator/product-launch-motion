@@ -1,7 +1,7 @@
 # python3 qa.py <mp4> <outdir> : 1-per-second storyboard + frame-difference scan
 import sys, subprocess, os, numpy as np
 mp4, out = sys.argv[1], sys.argv[2]; os.makedirs(out, exist_ok=True)
-subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-i', mp4, '-vf', 'fps=1,scale=480:-1,tile=6x10', '-frames:v', '1', f'{out}/storyboard.png'], check=True)
+subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-i', mp4, '-vf', 'fps=1,scale=' + ('180' if 'vertical' in mp4 else '480') + ':-1,tile=' + ('10x6' if 'vertical' in mp4 else '6x10'), '-frames:v', '1', f'{out}/storyboard.png'], check=True)
 W, H = 192, 108
 raw = subprocess.run(['ffmpeg', '-loglevel', 'error', '-i', mp4, '-vf', f'scale={W}:{H},format=gray', '-f', 'rawvideo', '-'], capture_output=True, check=True).stdout
 fr = np.frombuffer(raw, np.uint8).reshape(-1, H, W).astype(np.float32)
