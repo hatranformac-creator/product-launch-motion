@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>AIMarketing launch film</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+  :root {
+    --navy: #19479D; --sky: #228ECD; --green: #24B24B; --teal: #13795B; --orange: #F4A04C;
+    --ink: #0E1B3D; --ink2: #42506A; --gray: #6B7A93; --line: #DCE4EF; --soft: #F6F9FD;
+  }
+  html, body { margin: 0; padding: 0; background: #F4F7FC; overflow: hidden; }
+  #stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: #F4F7FC;
+    font-family: 'Inter', sans-serif; color: var(--ink); -webkit-font-smoothing: antialiased; }
+  .layer { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+  #world { transform-origin: 0 0; }
+  .abs { position: absolute; left: 0; top: 0; }
+  .disp { font-family: 'Montserrat', sans-serif; }
+  .tnum { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+  .card { background: #fff; border-radius: 28px; }
+  .chip { display: flex; align-items: center; gap: 12px; height: 64px; padding: 0 22px 0 12px; border-radius: 32px;
+    background: #fff; box-shadow: 0 10px 30px rgba(25,71,157,.10), 0 1px 3px rgba(14,27,61,.08);
+    font: 600 24px 'Inter'; color: var(--ink); white-space: nowrap; }
+  .ico { display: flex; align-items: center; justify-content: center; color: #fff; font: 800 18px 'Inter'; flex: none; }
+  .row { display: flex; align-items: center; }
+  .skel { position: absolute; height: 12px; border-radius: 6px; background: #E6ECF5; }
+  #hero { position: absolute; left: 0; top: 0; overflow: hidden; }
+  .content { position: absolute; left: 50%; top: 50%; }
+  .content > * { position: absolute; }
+  .cursor { position: absolute; left: 0; top: 0; }
+  .pill { position: absolute; left: 26px; top: 26px; height: 34px; padding: 0 14px; border-radius: 17px; display: flex;
+    align-items: center; font: 600 17px 'Inter'; color: #fff; white-space: nowrap; }
+  .lab, .lab2 { display: inline-block; }
+  .ripple { position: absolute; left: 0; top: 0; border-radius: 50%; border: 3px solid var(--sky); }
+  svg { overflow: visible; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bg" class="layer"></div>
+  <div id="world" class="layer"></div>
+  <canvas id="trail" class="layer" width="1920" height="1080"></canvas>
+  <div id="hud" class="layer"></div>
+</div>
+<script src="film.js"></script>
+</body>
+</html>
